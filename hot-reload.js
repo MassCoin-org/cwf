@@ -1,6 +1,5 @@
 (function () {
   let ws = new WebSocket("ws://${ip}:6167/");
-
   ws.onmessage = (_) => {
     fetch(window.location.href, {
       headers: {

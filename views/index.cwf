@@ -7,9 +7,6 @@
     <title>Document</title>
   </head>
   <body>
-    <h1>yay</h1>
-    <script lang="ts">
-      alert("kur");
-    </script>
+    <h1>dsfsf</h1>
   </body>
 </html>

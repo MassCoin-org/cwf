@@ -54,7 +54,7 @@ export class Cwf {
           .querySelector("head")
           .appendChild(
             parse(
-              `<script hot-reload>!function(){let ws;new WebSocket("ws://${ip}:6167/").onmessage=_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(a=>a.text()).then(r=>{document.body.innerHTML=r,document.querySelectorAll("script").forEach(e=>{console.log(e),""!==e.getAttribute("hot-reload")&&eval(e.textContent)})})}}()</script>`
+              `<script hot-reload>!function(){let ws=new WebSocket("ws://${ip}:6167/");ws.onmessage=(_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(e=>e.text()).then(r=>{document.body.innerHTML=r,document.querySelectorAll("script").forEach(e=>{console.log(e),""!==e.getAttribute("hot-reload")&&eval(e.textContent)})})})}();</script>`
             )
           );
 
