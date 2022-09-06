@@ -116,8 +116,8 @@ export class Cwf {
    * Used to handle the route manually.
    *
    * Can be used for checks before rendering the view using the `renderView` function inside the callback.
-   * @param route
-   * @param handler
+   * @param route The route to handle.
+   * @param handler The handler for the route.
    */
   handleRoute(
     route: string,

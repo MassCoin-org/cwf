@@ -7,6 +7,6 @@
     <title>Document</title>
   </head>
   <body>
-    <h1>beins</h1>
+    <h1>This route shouldn't be shown unless it's redirected to by another route.</h1>
   </body>
 </html>
