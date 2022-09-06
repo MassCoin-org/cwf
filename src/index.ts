@@ -37,6 +37,12 @@ export class Cwf {
   }
 
   private renderView(viewName: string, res: Response) {
+    // routes that start with a minus are private, and not meant to be displayed.
+    if (viewName.startsWith("-")) {
+      this.renderView("404", res);
+      return;
+    }
+
     viewName = viewName === "/" ? "index" : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
 
