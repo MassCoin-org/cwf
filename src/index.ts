@@ -10,6 +10,7 @@ import { CwfRequest } from "./CwfRequest";
 import { networkInterfaces } from "os";
 import * as cookieParser from "cookie-parser";
 import { CwfResponse } from "./CwfResponse";
+import { RouteAlreadyHandled } from "./RouteAlreadyHandled";
 
 export class Cwf {
   private expressApp: Express;
@@ -131,6 +132,12 @@ export class Cwf {
       renderView: (viewName?: string) => void
     ) => void
   ) {
+    if (Object.keys(this.customHandledRoutes).includes(route)) {
+      throw new RouteAlreadyHandled(
+        `The route ${route} is already handled manually.`
+      );
+    }
+
     this.customHandledRoutes[route] = (req: Request, res: Response) => {
       const renderView = (viewName?: string) => {
         if (!viewName) {
