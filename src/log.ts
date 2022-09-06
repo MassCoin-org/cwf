@@ -4,6 +4,7 @@ export enum LogLevel {
   Error,
   Success,
   Info,
+  Debug,
 }
 
 function colorOutput(
@@ -26,6 +27,10 @@ export function log(logLevel: LogLevel, message: string) {
     }
     case LogLevel.Info: {
       colorOutput(colors.blue, "INFO", message);
+      break;
+    }
+    case LogLevel.Debug: {
+      colorOutput(colors.cyan, "DEBUG", message);
       break;
     }
   }

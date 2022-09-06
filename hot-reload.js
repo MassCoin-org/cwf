@@ -1,5 +1,5 @@
 (function () {
-  let ws = new WebSocket("ws://127.0.0.1:6167/");
+  let ws = new WebSocket("ws://${ip}:6167/");
 
   ws.onmessage = (_) => {
     fetch(window.location.href, {
@@ -9,7 +9,14 @@
     })
       .then((r) => r.text())
       .then((r) => {
-        document.querySelector("html").innerHTML = r;
+        document.body.innerHTML = r;
+
+        document.querySelectorAll("script").forEach((e) => {
+          console.log(e);
+          if (e.getAttribute("hot-reload") !== "") {
+            eval(e.textContent);
+          }
+        });
       });
   };
 })();

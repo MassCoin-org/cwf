@@ -1,8 +1,11 @@
 import cwf from "./index";
-import * as appRoot from "app-root-path";
+import { CwfRequest } from "./CwfRequest";
 
 const app = cwf({ debug: true });
 
-console.log(appRoot.path.america);
+app.handleRoute("/", (req: CwfRequest, _, renderView: () => void) => {
+  console.log(`CookiesT-S: ${JSON.stringify(req.cookies, null, 4)}`);
+  renderView();
+});
 
 app.listen(3000);
