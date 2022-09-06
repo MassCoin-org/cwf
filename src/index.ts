@@ -162,6 +162,10 @@ export class Cwf {
     };
   }
 
+  /**
+   * Starts listening on the provided port, or, if it's not provided, on port 3000.
+   * @param port The port.
+   */
   listen(port: number = 3000) {
     this.expressApp.listen(port, () => {
       log(LogLevel.Info, `Started server on http://localhost:${port}`);
