@@ -3,7 +3,7 @@ import { Express, Request, Response } from "express";
 import { log, LogLevel } from "./log";
 import { path as rootPath } from "app-root-path";
 import { exists, filesInFolder, getContents } from "./util";
-import { parse } from "node-html-parser";
+import { HTMLElement, parse } from "node-html-parser";
 import { WebSocketServer, WebSocket } from "ws";
 import * as chokidar from "chokidar";
 import { CwfRequest } from "./CwfRequest";
@@ -11,12 +11,15 @@ import { networkInterfaces } from "os";
 import * as cookieParser from "cookie-parser";
 import { CwfResponse } from "./CwfResponse";
 import { RouteAlreadyHandled } from "./RouteAlreadyHandled";
+import { MalformedComponent } from "./MalformedComponent";
 
 export class Cwf {
   private expressApp: Express;
   private wss: WebSocketServer;
   private connected: WebSocket[] = [];
   private debug: boolean;
+  // TODO: make this contain way more data
+  private components: HTMLElement[] = [];
   private customHandledRoutes: {
     [key: string]: (req: Request, res: Response) => void;
   } = {};
@@ -24,6 +27,8 @@ export class Cwf {
   constructor(debug: boolean) {
     this.expressApp = express();
     this.setupExpress();
+    this.findComponents();
+    this.watchComponents();
     this.setupRoutes();
 
     this.debug = debug;
@@ -37,6 +42,63 @@ export class Cwf {
     this.expressApp.use(cookieParser());
   }
 
+  private findComponents() {
+    const components = filesInFolder(`${rootPath}/components`);
+
+    for (let component of components) {
+      const componentContent = getContents(`${rootPath}/components/${component}`);
+      const parsedElement = parse(componentContent).querySelector("comp");
+      
+      if (!parsedElement) {
+        throw new MalformedComponent("The component's root node is not a <comp> tag.");
+      }
+
+      if (!parsedElement.hasAttribute("name")) {
+        throw new MalformedComponent("The component doesn't have a name attribute.");
+      }
+      
+      this.components.push(parsedElement);
+    }
+  }
+
+  private watchComponents() {
+    chokidar.watch(`${rootPath}/components`).on("change", (path, __) => {
+      this.refreshComponents();
+    })
+  }
+
+  private refreshComponents() {
+    this.components = [];
+    this.findComponents();
+    log(LogLevel.Info, `Refreshed components.`)
+  }
+
+  private getComponentAsDiv(componentName: string) {
+    for (let component of this.components) {
+      if (component.getAttribute("name") == componentName) {
+        const componentCopy = component;
+        componentCopy.tagName = "div";
+        componentCopy.removeAttribute("name");
+        return componentCopy;
+      }
+    }
+
+    return null;
+  }
+
+  private replaceComponents(view: HTMLElement) {
+    for (let component of this.components) {
+      const componentCalls = view.getElementsByTagName(`Component_${component.getAttribute("name")}`);
+      
+      for (let componentCall of componentCalls) {
+        const divComponent = this.getComponentAsDiv(component.getAttribute("name"));
+        componentCall.innerHTML = divComponent.innerHTML;
+        componentCall.tagName = "div";
+      }
+    }
+    return view.toString();
+  }
+  
   private renderView(viewName: string, res: Response) {
     viewName = viewName === "/" ? "index" : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
@@ -58,7 +120,7 @@ export class Cwf {
             )
           );
 
-        res.send(root.toString());
+        res.send(this.replaceComponents(root));
       } else {
         res.send(getContents(viewPath));
       }
@@ -88,6 +150,12 @@ export class Cwf {
     });
   }
 
+  private broadcastReload() {
+    this.connected.forEach((ws) =>
+      ws.send(JSON.stringify({ status: "changed" }))
+    );
+  }
+
   private setupHotReload() {
     this.wss = new WebSocketServer({
       port: 6167,
@@ -106,9 +174,7 @@ export class Cwf {
 
     for (let view of views) {
       chokidar.watch(`${rootPath}/views/${view}`).on("change", (_, __) => {
-        this.connected.forEach((ws) =>
-          ws.send(JSON.stringify({ status: "changed" }))
-        );
+        this.broadcastReload();
       });
     }
   }
