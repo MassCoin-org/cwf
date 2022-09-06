@@ -36,13 +36,11 @@ export class Cwf {
     this.expressApp.use(cookieParser());
   }
 
-  private renderView(req: Request, res: Response) {
-    const viewName = req.path != "/" ? req.path : "index";
+  private renderView(viewName: string, res: Response) {
+    viewName = viewName === "/" ? "index" : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
 
     if (exists(viewPath)) {
-      res.set("Content-Type", "text/html");
-
       // add hot reloading when in debug mode
       if (this.debug) {
         const contents = getContents(viewPath);
@@ -75,7 +73,7 @@ export class Cwf {
         return;
       }
 
-      this.renderView(req, res);
+      this.renderView(req.path, res);
     });
   }
 
@@ -104,13 +102,33 @@ export class Cwf {
     }
   }
 
+  /**
+   * Used to handle the route manually.
+   *
+   * Can be used for checks before rendering the view using the `renderView` function inside the callback.
+   * @param route
+   * @param handler
+   */
   handleRoute(
     route: string,
-    handler: (req: CwfRequest, res: CwfResponse, renderView: () => void) => void
+    handler: (
+      req: CwfRequest,
+      res: CwfResponse,
+      /**
+       * Renders a view.
+       * @param viewName The name of the view. Finds a view with the same name as the path if not defined.
+       */
+      renderView: (viewName?: string) => void
+    ) => void
   ) {
     this.customHandledRoutes[route] = (req: Request, res: Response) => {
-      const renderView = () => {
-        this.renderView(req, res);
+      const renderView = (viewName?: string) => {
+        if (!viewName) {
+          this.renderView(req.path, res);
+          return;
+        }
+
+        this.renderView(viewName, res);
       };
 
       const cookies: { [key: string]: string } = {};
