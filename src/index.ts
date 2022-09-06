@@ -62,7 +62,11 @@ export class Cwf {
         res.send(getContents(viewPath));
       }
     } else {
-      res.send("404");
+      if (exists(`${rootPath}/views/404.cwf`)) {
+        this.renderView("404", res);
+      } else {
+        res.send("404");
+      }
     }
   }
 
