@@ -1,4 +1,4 @@
-import * as colors from "colors";
+import * as colors from 'colors';
 
 export enum LogLevel {
   Error,
@@ -18,19 +18,19 @@ function colorOutput(
 export function log(logLevel: LogLevel, message: string) {
   switch (logLevel) {
     case LogLevel.Error: {
-      colorOutput(colors.red, "ERROR", message);
+      colorOutput(colors.red, 'ERROR', message);
       break;
     }
     case LogLevel.Success: {
-      colorOutput(colors.green, "SUCCESS", message);
+      colorOutput(colors.green, 'SUCCESS', message);
       break;
     }
     case LogLevel.Info: {
-      colorOutput(colors.blue, "INFO", message);
+      colorOutput(colors.blue, 'INFO', message);
       break;
     }
     case LogLevel.Debug: {
-      colorOutput(colors.cyan, "DEBUG", message);
+      colorOutput(colors.cyan, 'DEBUG', message);
       break;
     }
   }

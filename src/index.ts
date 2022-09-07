@@ -1,17 +1,18 @@
-import * as express from "express";
-import { Express, Request, Response } from "express";
-import { log, LogLevel } from "./log";
-import { path as rootPath } from "app-root-path";
-import { exists, filesInFolder, getContents } from "./util";
-import { HTMLElement, parse } from "node-html-parser";
-import { WebSocketServer, WebSocket } from "ws";
-import * as chokidar from "chokidar";
-import { CwfRequest } from "./CwfRequest";
-import { networkInterfaces } from "os";
-import * as cookieParser from "cookie-parser";
-import { CwfResponse } from "./CwfResponse";
-import { RouteAlreadyHandled } from "./RouteAlreadyHandled";
-import { MalformedComponent } from "./MalformedComponent";
+import * as express from 'express';
+import { Express, Request, Response } from 'express';
+import { log, LogLevel } from './log';
+import { path as rootPath } from 'app-root-path';
+import { exists, filesInFolder, getContents } from './util';
+import { HTMLElement, parse } from 'node-html-parser';
+import { WebSocketServer, WebSocket } from 'ws';
+import * as chokidar from 'chokidar';
+import { CwfRequest } from './CwfRequest';
+import { networkInterfaces } from 'os';
+import * as cookieParser from 'cookie-parser';
+import { CwfResponse } from './CwfResponse';
+import { RouteAlreadyHandled } from './RouteAlreadyHandled';
+import { MalformedComponent } from './MalformedComponent';
+import * as path from 'path';
 
 export class Cwf {
   private expressApp: Express;
@@ -29,13 +30,13 @@ export class Cwf {
     this.expressApp = express();
     this.setupExpress();
     this.findComponents();
-    this.watchComponents();
     this.setupRoutes();
 
     this.debug = debug;
 
     if (debug) {
       this.setupHotReload();
+      this.watchComponents();
     }
   }
 
@@ -60,16 +61,10 @@ export class Cwf {
         "The component's root node is not a <comp> tag."
       );
     }
-    console.log(element.getAttribute("name"));
-    if (!element.hasAttribute("name")) {
-      throw new MalformedComponent(
-        "The component doesn't have a name attribute."
-      );
-    }
 
     // if the component is already registered
     if (!!this.components[componentName] && !reReg) {
-      throw new MalformedComponent("This component is already registered.");
+      throw new MalformedComponent('This component is already registered.');
     } else if (!!this.components[componentName] && reReg) {
       delete this.components[componentName];
     }
@@ -78,20 +73,26 @@ export class Cwf {
 
     this.components[componentName] = [componentPath, element];
 
-    log(LogLevel.Info, `Loaded component ${componentName.bgCyan}`);
+    if (reReg) {
+      log(LogLevel.Info, `Reloaded component ${componentName.bgCyan}.`);
+      return;
+    }
+
+    log(LogLevel.Info, `Loaded component ${componentName.bgCyan}.`);
   }
 
   private findComponents() {
     const components = filesInFolder(`${rootPath}/components`);
 
     for (let component of components) {
-      const nameWithoutExt = component.split(".cwf")[0];
+      const nameWithoutExt = component.split('.cwf')[0];
       const componentContent = getContents(
         `${rootPath}/components/${component}`
       );
 
       const parsedElement =
-        parse(componentContent).getElementsByTagName("comp")[0];
+        parse(componentContent).getElementsByTagName('comp')[0];
+
       this.loadComponent(nameWithoutExt, parsedElement);
     }
   }
@@ -103,12 +104,17 @@ export class Cwf {
         // TODO: (but not right now): find a way to not use polling... may be a long shot.
         usePolling: true,
       })
-      .on("change", (path, __) => {
-        let component = parse(getContents(path)).getElementsByTagName(
-          "comp"
+      .on('change', (compPath, __) => {
+        let component = parse(getContents(compPath)).getElementsByTagName(
+          'comp'
         )[0];
 
-        this.loadComponent(component.getAttribute("name"), component, true);
+        const pathSplitted = compPath.split(path.sep);
+
+        let componentName =
+          pathSplitted[pathSplitted.length - 1].split('.cwf')[0];
+
+        this.loadComponent(componentName, component, true);
         this.broadcastReload();
       });
   }
@@ -129,8 +135,8 @@ export class Cwf {
     }
 
     const componentCopy = component;
-    componentCopy.tagName = "div";
-    componentCopy.removeAttribute("name");
+    componentCopy.tagName = 'div';
+    componentCopy.removeAttribute('name');
     return componentCopy;
   }
 
@@ -144,7 +150,7 @@ export class Cwf {
       for (let componentCall of componentCalls) {
         const divComponent = this.getComponentAsDiv(componentName);
         componentCall.innerHTML = divComponent.innerHTML;
-        componentCall.tagName = "div";
+        componentCall.tagName = 'div';
       }
     }
 
@@ -152,7 +158,7 @@ export class Cwf {
   }
 
   private renderView(viewName: string, res: Response) {
-    viewName = viewName === "/" ? "index" : viewName;
+    viewName = viewName === '/' ? 'index' : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
 
     if (exists(viewPath)) {
@@ -162,13 +168,13 @@ export class Cwf {
         const root = parse(contents);
         const ip = Object.values(networkInterfaces())
           .flat()
-          .find((i) => i.family == "IPv4" && !i.internal).address;
+          .find((i) => i.family == 'IPv4' && !i.internal).address;
 
         root
-          .querySelector("head")
+          .querySelector('head')
           .appendChild(
             parse(
-              `<script hot-reload>!function(){let ws=new WebSocket("ws://${ip}:6167/");ws.onmessage=(_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(e=>e.text()).then(r=>{document.body.innerHTML=r,document.querySelectorAll("script").forEach(e=>{console.log(e),""!==e.getAttribute("hot-reload")&&eval(e.textContent)})})})}();</script>`
+              `<script hot-reload>!function(){let ws;new WebSocket("ws://${ip}:6167/").onmessage=_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(a=>a.text()).then(r=>{console.log("[Hot Reload] Reloading (1/2)..."),document.documentElement.innerHTML=r,document.querySelectorAll("script").forEach(e=>{console.log("[Hot Reload] Reloading (2/2)..."),""!==e.getAttribute("hot-reload")&&eval(e.textContent)})})}}()</script>`
             )
           );
 
@@ -178,23 +184,23 @@ export class Cwf {
       }
     } else {
       if (exists(`${rootPath}/views/404.cwf`)) {
-        this.renderView("404", res);
+        this.renderView('404', res);
       } else {
-        res.send("404");
+        res.send('404');
       }
     }
   }
 
   private setupRoutes() {
-    this.expressApp.get("/*", (req: Request, res: Response) => {
+    this.expressApp.get('/*', (req: Request, res: Response) => {
       if (Object.keys(this.customHandledRoutes).includes(req.path)) {
         this.customHandledRoutes[req.path](req, res);
         return;
       }
 
       // routes that start with a minus are private, and not meant to be displayed.
-      if (req.path.startsWith("/-")) {
-        this.renderView("404", res);
+      if (req.path.startsWith('/-')) {
+        this.renderView('404', res);
         return;
       }
 
@@ -204,7 +210,7 @@ export class Cwf {
 
   private broadcastReload() {
     this.connected.forEach((ws) =>
-      ws.send(JSON.stringify({ status: "changed" }))
+      ws.send(JSON.stringify({ status: 'changed' }))
     );
   }
 
@@ -213,19 +219,19 @@ export class Cwf {
       port: 6167,
     });
 
-    this.wss.on("listening", () => {
+    this.wss.on('listening', () => {
       log(LogLevel.Info, `Hot reload listening on port 6167.`);
     });
 
-    this.wss.on("connection", (ws) => {
-      console.log("Connected.".rainbow);
+    this.wss.on('connection', (ws) => {
+      console.log('Connected.'.rainbow);
       this.connected.push(ws);
     });
 
     let views = filesInFolder(`${rootPath}/views`);
 
     for (let view of views) {
-      chokidar.watch(`${rootPath}/views/${view}`).on("change", (_, __) => {
+      chokidar.watch(`${rootPath}/views/${view}`).on('change', (_, __) => {
         this.broadcastReload();
       });
     }
