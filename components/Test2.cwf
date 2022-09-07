@@ -1,0 +1,7 @@
+<comp name="Test2">
+  <style>
+    body {
+      background-color: red;
+    }
+  </style>
+</comp>

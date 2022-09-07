@@ -18,8 +18,9 @@ export class Cwf {
   private wss: WebSocketServer;
   private connected: WebSocket[] = [];
   private debug: boolean;
-  // TODO: make this contain way more data
-  private components: HTMLElement[] = [];
+  private components: {
+    [key: string]: [path: string, componentHtml: HTMLElement];
+  } = {};
   private customHandledRoutes: {
     [key: string]: (req: Request, res: Response) => void;
   } = {};
@@ -42,63 +43,114 @@ export class Cwf {
     this.expressApp.use(cookieParser());
   }
 
+  /**
+   * Loads a component into `this.components`.
+   *
+   * @param componentName The name of the component.
+   * @param element The element of the component.
+   * @param reReg Marks if we should re-register or error when attempting to.
+   */
+  private loadComponent(
+    componentName: string,
+    element: HTMLElement,
+    reReg: boolean = false
+  ) {
+    if (!element) {
+      throw new MalformedComponent(
+        "The component's root node is not a <comp> tag."
+      );
+    }
+    console.log(element.getAttribute("name"));
+    if (!element.hasAttribute("name")) {
+      throw new MalformedComponent(
+        "The component doesn't have a name attribute."
+      );
+    }
+
+    // if the component is already registered
+    if (!!this.components[componentName] && !reReg) {
+      throw new MalformedComponent("This component is already registered.");
+    } else if (!!this.components[componentName] && reReg) {
+      delete this.components[componentName];
+    }
+
+    let componentPath = `${rootPath}/components/${componentName}`;
+
+    this.components[componentName] = [componentPath, element];
+
+    log(LogLevel.Info, `Loaded component ${componentName.bgCyan}`);
+  }
+
   private findComponents() {
     const components = filesInFolder(`${rootPath}/components`);
 
     for (let component of components) {
-      const componentContent = getContents(`${rootPath}/components/${component}`);
-      const parsedElement = parse(componentContent).querySelector("comp");
-      
-      if (!parsedElement) {
-        throw new MalformedComponent("The component's root node is not a <comp> tag.");
-      }
+      const nameWithoutExt = component.split(".cwf")[0];
+      const componentContent = getContents(
+        `${rootPath}/components/${component}`
+      );
 
-      if (!parsedElement.hasAttribute("name")) {
-        throw new MalformedComponent("The component doesn't have a name attribute.");
-      }
-      
-      this.components.push(parsedElement);
+      const parsedElement =
+        parse(componentContent).getElementsByTagName("comp")[0];
+      this.loadComponent(nameWithoutExt, parsedElement);
     }
   }
 
   private watchComponents() {
-    chokidar.watch(`${rootPath}/components`).on("change", (path, __) => {
-      this.refreshComponents();
-    })
+    chokidar
+      .watch(`${rootPath}/components`, {
+        // bad, but we must, in order to prevent errors... :(
+        // TODO: (but not right now): find a way to not use polling... may be a long shot.
+        usePolling: true,
+      })
+      .on("change", (path, __) => {
+        let component = parse(getContents(path)).getElementsByTagName(
+          "comp"
+        )[0];
+
+        this.loadComponent(component.getAttribute("name"), component, true);
+        this.broadcastReload();
+      });
   }
 
+  /**
+   * Shouldn't really be called.
+   */
   private refreshComponents() {
-    this.components = [];
+    this.components = {};
     this.findComponents();
-    log(LogLevel.Info, `Refreshed components.`)
+    log(LogLevel.Info, `Refreshed components.`);
   }
 
-  private getComponentAsDiv(componentName: string) {
-    for (let component of this.components) {
-      if (component.getAttribute("name") == componentName) {
-        const componentCopy = component;
-        componentCopy.tagName = "div";
-        componentCopy.removeAttribute("name");
-        return componentCopy;
-      }
+  private getComponentAsDiv(componentName: string): HTMLElement | null {
+    const component = this.components[componentName][1];
+    if (!component) {
+      return null;
     }
 
-    return null;
+    const componentCopy = component;
+    componentCopy.tagName = "div";
+    componentCopy.removeAttribute("name");
+    return componentCopy;
   }
 
   private replaceComponents(view: HTMLElement) {
-    for (let component of this.components) {
-      const componentCalls = view.getElementsByTagName(`Component_${component.getAttribute("name")}`);
-      
+    for (let componentName in this.components) {
+      const componentCalls = view.getElementsByTagName(
+        `Component_${componentName}`
+      );
+
+      console.log(componentName);
       for (let componentCall of componentCalls) {
-        const divComponent = this.getComponentAsDiv(component.getAttribute("name"));
+        const divComponent = this.getComponentAsDiv(componentName);
         componentCall.innerHTML = divComponent.innerHTML;
         componentCall.tagName = "div";
       }
     }
+
     return view.toString();
   }
-  
+
   private renderView(viewName: string, res: Response) {
     viewName = viewName === "/" ? "index" : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
@@ -189,7 +241,13 @@ export class Cwf {
   handleRoute(
     route: string,
     handler: (
+      /**
+       * The CwfRequest.
+       */
       req: CwfRequest,
+      /**
+       * The CwfResponse.
+       */
       res: CwfResponse,
       /**
        * Renders a view.
