@@ -146,7 +146,6 @@ export class Cwf {
         `Component_${componentName}`
       );
 
-      console.log(componentName);
       for (let componentCall of componentCalls) {
         const divComponent = this.getComponentAsDiv(componentName);
         componentCall.innerHTML = divComponent.innerHTML;
@@ -174,7 +173,7 @@ export class Cwf {
           .querySelector('head')
           .appendChild(
             parse(
-              `<script hot-reload>!function(){let ws;new WebSocket("ws://${ip}:6167/").onmessage=_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(a=>a.text()).then(r=>{console.log("[Hot Reload] Reloading (1/2)..."),document.documentElement.innerHTML=r,document.querySelectorAll("script").forEach(e=>{console.log("[Hot Reload] Reloading (2/2)..."),""!==e.getAttribute("hot-reload")&&eval(e.textContent)})})}}()</script>`
+              `<script hot-reload>new WebSocket("ws://${ip}:6167/").onmessage=_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(a=>a.text()).then(a=>{console.log("[Hot Reload] Reloading..."),document.documentElement.innerHTML=a,console.log("[Hot Reload] Done!")})}</script>`
             )
           );
 

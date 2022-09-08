@@ -9,15 +9,9 @@
     })
       .then((r) => r.text())
       .then((r) => {
-        console.log('[Hot Reload] Reloading (1/2)...');
+        console.log('[Hot Reload] Reloading...');
         document.documentElement.innerHTML = r;
-
-        document.querySelectorAll('script').forEach((e) => {
-          console.log('[Hot Reload] Reloading (2/2)...');
-          if (e.getAttribute('hot-reload') !== '') {
-            eval(e.textContent);
-          }
-        });
+        console.log('[Hot Reload] Done!');
       });
   };
 })();
