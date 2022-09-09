@@ -1,37 +1,25 @@
-import * as colors from 'colors';
-
-export enum LogLevel {
-  Error,
-  Success,
-  Info,
-  Debug,
-}
+import colors from 'colors';
 
 function colorOutput(
-  method: (a: string) => string,
+  method: (c: string) => string,
   logMsg: string,
   message: string
 ) {
   console.log(`[${method(logMsg)}] ${message}`);
 }
 
-export function log(logLevel: LogLevel, message: string) {
-  switch (logLevel) {
-    case LogLevel.Error: {
-      colorOutput(colors.red, 'ERROR', message);
-      break;
-    }
-    case LogLevel.Success: {
-      colorOutput(colors.green, 'SUCCESS', message);
-      break;
-    }
-    case LogLevel.Info: {
-      colorOutput(colors.blue, 'INFO', message);
-      break;
-    }
-    case LogLevel.Debug: {
-      colorOutput(colors.cyan, 'DEBUG', message);
-      break;
-    }
-  }
+export function error(message: string) {
+  colorOutput(colors.red, 'ERROR', message);
+}
+
+export function success(message: string) {
+  colorOutput(colors.green, 'SUCCESS', message);
+}
+
+export function info(message: string) {
+  colorOutput(colors.blue, 'SUCCESS', message);
+}
+
+export function debug(message: string) {
+  colorOutput(colors.cyan, 'DEBUG', message);
 }

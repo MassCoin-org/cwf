@@ -1,19 +1,19 @@
-import * as express from 'express';
+import express from 'express';
 import { Express, Request, Response } from 'express';
-import { log, LogLevel } from './log';
+import * as log from './log';
 import { path as rootPath } from 'app-root-path';
 import { exists, filesInFolder, getContents } from './util';
 import { HTMLElement, parse } from 'node-html-parser';
 import { WebSocketServer, WebSocket } from 'ws';
-import * as chokidar from 'chokidar';
+import chokidar from 'chokidar';
 import { CwfRequest } from './CwfRequest';
 import { networkInterfaces } from 'os';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { CwfResponse } from './CwfResponse';
 import { RouteAlreadyHandled } from './RouteAlreadyHandled';
 import { MalformedComponent } from './MalformedComponent';
-import * as path from 'path';
-
+import path from 'path';
+import { Server } from 'http';
 export class Cwf {
   private expressApp: Express;
   private wss: WebSocketServer;
@@ -25,6 +25,7 @@ export class Cwf {
   private customHandledRoutes: {
     [key: string]: (req: Request, res: Response) => void;
   } = {};
+  private server: Server;
 
   constructor(debug: boolean) {
     this.expressApp = express();
@@ -74,14 +75,18 @@ export class Cwf {
     this.components[componentName] = [componentPath, element];
 
     if (reReg) {
-      log(LogLevel.Info, `Reloaded component ${componentName.bgCyan}.`);
+      log.info(`Reloaded component ${componentName.bgCyan}.`);
       return;
     }
 
-    log(LogLevel.Info, `Loaded component ${componentName.bgCyan}.`);
+    log.info(`Loaded component ${componentName.bgCyan}.`);
   }
 
   private findComponents() {
+    if (!exists(`${rootPath}/components`)) {
+      return;
+    }
+
     const components = filesInFolder(`${rootPath}/components`);
 
     for (let component of components) {
@@ -125,7 +130,7 @@ export class Cwf {
   private refreshComponents() {
     this.components = {};
     this.findComponents();
-    log(LogLevel.Info, `Refreshed components.`);
+    log.info(`Refreshed components.`);
   }
 
   private getComponentAsDiv(componentName: string): HTMLElement | null {
@@ -219,7 +224,7 @@ export class Cwf {
     });
 
     this.wss.on('listening', () => {
-      log(LogLevel.Info, `Hot reload listening on port 6167.`);
+      log.info(`Hot reload listening on port 6167.`);
     });
 
     this.wss.on('connection', (ws) => {
@@ -296,9 +301,20 @@ export class Cwf {
    * @param port The port.
    */
   listen(port: number = 3000) {
-    this.expressApp.listen(port, () => {
-      log(LogLevel.Info, `Started server on http://localhost:${port}`);
+    this.server = this.expressApp.listen(port, () => {
+      log.info(`Started server on http://localhost:${port}`);
     });
+  }
+
+  /**
+   * Destroys the Cwf listener.
+   *
+   * Created for the unit tests.
+   */
+  destroy() {
+    if (this.server !== undefined) {
+      this.server.unref();
+    }
   }
 }
 
