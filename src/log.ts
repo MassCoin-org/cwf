@@ -17,7 +17,7 @@ export function success(message: string) {
 }
 
 export function info(message: string) {
-  colorOutput(colors.blue, 'SUCCESS', message);
+  colorOutput(colors.blue, 'INFO', message);
 }
 
 export function debug(message: string) {
