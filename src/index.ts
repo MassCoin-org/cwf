@@ -362,3 +362,5 @@ export class Cwf {
 export default function (options?: { debug: boolean }): Cwf {
   return new Cwf(options?.debug || false);
 }
+
+export { ApiContext };

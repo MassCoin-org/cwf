@@ -9,7 +9,6 @@
   "version": "1.1.1",
   "description": "",
   "main": "dist/index.js",
-  "type": "module",
   "scripts": {
     "test": "jest --forceExit",
     "format": "npx prettier --write .",
