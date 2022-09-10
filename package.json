@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest --forceExit",
     "format": "npx prettier --write .",
-    "build": "tsc",
+    "build": "npm run test && tsc",
     "prepublishOnly": "npm run build"
   },
   "keywords": [],
