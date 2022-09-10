@@ -14,6 +14,7 @@ import { RouteAlreadyHandled } from './RouteAlreadyHandled';
 import { MalformedComponent } from './MalformedComponent';
 import path from 'path';
 import { Server } from 'http';
+import { ApiContext } from './ApiContext';
 export class Cwf {
   private expressApp: Express;
   private wss: WebSocketServer;
@@ -127,13 +128,15 @@ export class Cwf {
   /**
    * Shouldn't really be called.
    */
-  private refreshComponents() {
+  private async refreshComponents() {
     this.components = {};
     this.findComponents();
     log.info(`Refreshed components.`);
   }
 
-  private getComponentAsDiv(componentName: string): HTMLElement | null {
+  private async getComponentAsDiv(
+    componentName: string
+  ): Promise<HTMLElement | null> {
     const component = this.components[componentName][1];
     if (!component) {
       return null;
@@ -145,14 +148,14 @@ export class Cwf {
     return componentCopy;
   }
 
-  private replaceComponents(view: HTMLElement) {
+  private async replaceComponents(view: HTMLElement) {
     for (let componentName in this.components) {
       const componentCalls = view.getElementsByTagName(
         `Component_${componentName}`
       );
 
       for (let componentCall of componentCalls) {
-        const divComponent = this.getComponentAsDiv(componentName);
+        const divComponent = await this.getComponentAsDiv(componentName);
         componentCall.innerHTML = divComponent.innerHTML;
         componentCall.tagName = 'div';
       }
@@ -161,7 +164,7 @@ export class Cwf {
     return view.toString();
   }
 
-  private renderView(viewName: string, res: Response) {
+  private async renderView(viewName: string, res: Response) {
     viewName = viewName === '/' ? 'index' : viewName;
     const viewPath = `${rootPath}/views/${viewName}.cwf`;
 
@@ -195,8 +198,8 @@ export class Cwf {
     }
   }
 
-  private setupRoutes() {
-    this.expressApp.get('/*', (req: Request, res: Response) => {
+  private async setupRoutes() {
+    this.expressApp.all('/*', async (req: Request, res: Response) => {
       if (Object.keys(this.customHandledRoutes).includes(req.path)) {
         this.customHandledRoutes[req.path](req, res);
         return;
@@ -206,19 +209,53 @@ export class Cwf {
       if (req.path.startsWith('/-')) {
         this.renderView('404', res);
         return;
+      } else if (req.path.startsWith('/api')) {
+        // warning: weird code ahead!
+        // but it works, as of 9/10/22
+        const splitted = req.path.split('/api/')[1];
+
+        let fileName = splitted.endsWith('/')
+          ? splitted.slice(0, -1)
+          : splitted;
+
+        let filePath =
+          rootPath +
+          `${path.sep}views${path.sep}api${path.sep}` +
+          fileName +
+          '.ts';
+
+        try {
+          await import(filePath);
+        } catch (err) {
+          return;
+        }
+
+        let apiFile: { default: (ctx: ApiContext) => Promise<void> } =
+          await import(filePath);
+
+        const ctx = new ApiContext(req.method, req.headers);
+
+        ctx.send = (...args: any[]) => res.send(...args);
+        ctx.sendJson = (...args: any[]) => res.json(...args);
+
+        await apiFile.default(ctx);
+
+        return;
       }
 
-      this.renderView(req.path, res);
+      if (req.method == 'GET') {
+        this.renderView(req.path, res);
+      }
     });
   }
 
-  private broadcastReload() {
+  private async broadcastReload() {
     this.connected.forEach((ws) =>
       ws.send(JSON.stringify({ status: 'changed' }))
     );
   }
 
-  private setupHotReload() {
+  private async setupHotReload() {
     if (!exists(`${rootPath}/views`)) {
       return;
     }
@@ -252,7 +289,7 @@ export class Cwf {
    * @param route The route to handle.
    * @param handler The handler for the route.
    */
-  handleRoute(
+  async handleRoute(
     route: string,
     handler: (
       /**
@@ -304,7 +341,7 @@ export class Cwf {
    * Starts listening on the provided port, or, if it's not provided, on port 3000.
    * @param port The port.
    */
-  listen(port: number = 3000) {
+  async listen(port: number = 3000) {
     this.server = this.expressApp.listen(port, () => {
       log.info(`Started server on http://localhost:${port}`);
     });
