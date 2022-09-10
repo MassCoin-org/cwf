@@ -219,6 +219,10 @@ export class Cwf {
   }
 
   private setupHotReload() {
+    if (!exists(`${rootPath}/views`)) {
+      return;
+    }
+
     this.wss = new WebSocketServer({
       port: 6167,
     });
