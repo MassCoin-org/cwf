@@ -191,7 +191,7 @@ export class Cwf {
       }
     } else {
       if (exists(`${rootPath}/views/404.cwf`)) {
-        this.renderView('404', res);
+        await this.renderView('404', res);
       } else {
         res.send('404');
       }
@@ -207,7 +207,7 @@ export class Cwf {
 
       // routes that start with a minus are private, and not meant to be displayed.
       if (req.path.startsWith('/-')) {
-        this.renderView('404', res);
+        await this.renderView('404', res);
         return;
       } else if (req.path.startsWith('/api')) {
         // warning: weird code ahead!
@@ -244,7 +244,7 @@ export class Cwf {
       }
 
       if (req.method == 'GET') {
-        this.renderView(req.path, res);
+        await this.renderView(req.path, res);
       }
     });
   }
@@ -313,14 +313,14 @@ export class Cwf {
       );
     }
 
-    this.customHandledRoutes[route] = (req: Request, res: Response) => {
-      const renderView = (viewName?: string) => {
+    this.customHandledRoutes[route] = async (req: Request, res: Response) => {
+      const renderView = async (viewName?: string) => {
         if (!viewName) {
-          this.renderView(req.path, res);
+          await this.renderView(req.path, res);
           return;
         }
 
-        this.renderView(viewName, res);
+        await this.renderView(viewName, res);
       };
 
       const cookies: { [key: string]: string } = {};
