@@ -181,7 +181,7 @@ export class Cwf {
           .querySelector('head')
           .appendChild(
             parse(
-              `<script hot-reload>new WebSocket("ws://${ip}:6167/").onmessage=_=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(a=>a.text()).then(a=>{console.log("[Hot Reload] Reloading..."),document.documentElement.innerHTML=a,console.log("[Hot Reload] Done!")})}</script>`
+              `<script live-reload>"use strict";(function(){let e=new WebSocket("ws://${ip}:6167/");e.onmessage=(e=>{fetch(window.location.href,{headers:{"Content-Type":"text/html"}}).then(e=>e.text()).then(e=>{console.log("[Live Reload] Reloading..."),window.location.reload()})})})();</script>`
             )
           );
 

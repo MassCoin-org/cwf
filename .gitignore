@@ -134,3 +134,6 @@ localtest/
 views/
 components/
 lt.ts
+
+# live reload
+live-reload.min.js

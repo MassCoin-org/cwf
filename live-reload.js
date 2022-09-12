@@ -9,10 +9,9 @@
       },
     })
       .then((r) => r.text())
-      .then((r) => {
-        console.log('[Hot Reload] Reloading...');
-        document.documentElement.innerHTML = r;
-        console.log('[Hot Reload] Done!');
+      .then((_) => {
+        console.log('[Live Reload] Reloading...');
+        window.location.reload();
       });
   };
 })();
