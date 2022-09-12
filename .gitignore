@@ -129,4 +129,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# testing stuff
 localtest/
+views/
+components/
+lt.ts

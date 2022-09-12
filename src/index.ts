@@ -185,7 +185,7 @@ export class Cwf {
             )
           );
 
-        res.send(this.replaceComponents(root));
+        res.send(await this.replaceComponents(root));
       } else {
         res.send(getContents(viewPath));
       }
@@ -227,10 +227,12 @@ export class Cwf {
         try {
           await import(filePath);
         } catch (err) {
+          await this.renderView('404', res);
           return;
         }
 
-        let apiFile: { default: (ctx: ApiContext) => Promise<void> } =
+        // the API definition (file)
+        let apiDefinition: { default: (ctx: ApiContext) => Promise<void> } =
           await import(filePath);
 
         const ctx = new ApiContext(req.method, req.headers);
@@ -238,7 +240,7 @@ export class Cwf {
         ctx.send = (...args: any[]) => res.send(...args);
         ctx.sendJson = (...args: any[]) => res.json(...args);
 
-        await apiFile.default(ctx);
+        await apiDefinition.default(ctx);
 
         return;
       }
@@ -249,7 +251,7 @@ export class Cwf {
     });
   }
 
-  private async broadcastReload() {
+  private broadcastReload() {
     this.connected.forEach((ws) =>
       ws.send(JSON.stringify({ status: 'changed' }))
     );
@@ -322,13 +324,6 @@ export class Cwf {
 
         await this.renderView(viewName, res);
       };
-
-      const cookies: { [key: string]: string } = {};
-
-      // converting the weird type to an object
-      for (let cookie in req.cookies) {
-        cookies[cookie] = req.cookies[cookie];
-      }
 
       const cwfRequest = new CwfRequest(req.cookies);
       const cwfResponse = new CwfResponse(res);

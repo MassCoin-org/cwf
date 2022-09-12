@@ -1,3 +1,4 @@
+'use strict';
 (function () {
   let ws = new WebSocket('ws://${ip}:6167/');
 
