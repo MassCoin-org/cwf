@@ -1,4 +1,4 @@
-import cwf, { Cwf } from './index';
+import { cwf, Cwf } from './index';
 
 const app = cwf();
 

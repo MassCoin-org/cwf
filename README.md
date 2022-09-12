@@ -29,7 +29,7 @@ The WIP web framework created to be used by [j4ce](https://github.com/j4cegh).
 - The index.ts file should look like this
 
 ```ts
-import cwf from 'capy-wf';
+import { cwf } from 'capy-wf';
 
 const app = cwf({
   debug: true,
