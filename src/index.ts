@@ -354,8 +354,8 @@ export class Cwf {
   }
 }
 
-export default function (options?: { debug: boolean }): Cwf {
+export default (options?: { debug: boolean }): Cwf => {
   return new Cwf(options?.debug || false);
-}
+};
 
 export { CwfRequest, CwfResponse, ApiContext };
